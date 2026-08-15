@@ -52,6 +52,10 @@ export const NODE_DEFAULT_SIZES: Record<
   hexagon: { width: 140, height: 110 },
 };
 
+/** Minimum node dimensions (px) enforced while resizing. */
+export const MIN_NODE_WIDTH = 60;
+export const MIN_NODE_HEIGHT = 40;
+
 /** The payload carried on a shape drag from the shape panel to the canvas. */
 export interface ShapeDragPayload {
   shape: NodeShape;
