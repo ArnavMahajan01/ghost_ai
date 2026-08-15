@@ -29,8 +29,8 @@ export async function PATCH(
   const body = await request.json().catch(() => ({}));
   const name = typeof body?.name === "string" ? body.name.trim() : "";
 
-  if (!name) {
-    return Response.json({ error: "Name is required" }, { status: 400 });
+  if (!name || name.length > 120) {
+    return Response.json({ error: "Name is required and small in length" }, { status: 400 });
   }
 
   const project = await prisma.project.update({
