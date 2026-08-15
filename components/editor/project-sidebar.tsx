@@ -1,6 +1,7 @@
 "use client";
 
 import { MoreVertical, Pencil, Plus, Trash2, X } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -12,30 +13,27 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import type { Project } from "@/types/project";
+import type { ProjectSummary } from "@/types/project";
 
 interface ProjectSidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  projects: Project[];
+  ownedProjects: ProjectSummary[];
+  sharedProjects: ProjectSummary[];
   onCreateProject: () => void;
-  onRenameProject: (project: Project) => void;
-  onDeleteProject: (project: Project) => void;
+  onRenameProject: (project: ProjectSummary) => void;
+  onDeleteProject: (project: ProjectSummary) => void;
 }
 
 export function ProjectSidebar({
   isOpen,
   onClose,
-  projects,
+  ownedProjects,
+  sharedProjects,
   onCreateProject,
   onRenameProject,
   onDeleteProject,
 }: ProjectSidebarProps) {
-  const ownedProjects = projects.filter((project) => project.role === "owner");
-  const sharedProjects = projects.filter(
-    (project) => project.role === "collaborator"
-  );
-
   return (
     <>
       <div
@@ -88,9 +86,12 @@ export function ProjectSidebar({
                       key={project.id}
                       className="group flex items-center justify-between gap-2 rounded-xl px-2.5 py-2 hover:bg-elevated"
                     >
-                      <span className="truncate text-sm text-copy-primary">
+                      <Link
+                        href={`/editor/${project.id}`}
+                        className="truncate text-sm text-copy-primary"
+                      >
                         {project.name}
-                      </span>
+                      </Link>
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           render={
@@ -145,9 +146,12 @@ export function ProjectSidebar({
                       key={project.id}
                       className="flex items-center gap-2 rounded-xl px-2.5 py-2 hover:bg-elevated"
                     >
-                      <span className="truncate text-sm text-copy-primary">
+                      <Link
+                        href={`/editor/${project.id}`}
+                        className="truncate text-sm text-copy-primary"
+                      >
                         {project.name}
-                      </span>
+                      </Link>
                     </li>
                   ))}
                 </ul>
