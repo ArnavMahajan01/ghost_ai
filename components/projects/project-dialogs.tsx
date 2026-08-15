@@ -11,11 +11,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { UseProjectDialogsReturn } from "@/hooks/use-project-dialogs";
+import type { UseProjectActionsReturn } from "@/hooks/use-project-actions";
 import { cn } from "@/lib/utils";
 
 interface ProjectDialogsProps {
-  state: UseProjectDialogsReturn;
+  state: UseProjectActionsReturn;
 }
 
 export function ProjectDialogs({ state }: ProjectDialogsProps) {
@@ -23,8 +23,9 @@ export function ProjectDialogs({ state }: ProjectDialogsProps) {
     dialog,
     name,
     setName,
-    slugPreview,
+    roomIdPreview,
     isLoading,
+    error,
     close,
     submitCreate,
     submitRename,
@@ -32,12 +33,12 @@ export function ProjectDialogs({ state }: ProjectDialogsProps) {
   } = state;
 
   const isNameEmpty = !name.trim();
-  const isSlugInvalid = !isNameEmpty && !slugPreview;
-  const slugMessage = isNameEmpty
-    ? "Enter a name to preview the slug"
-    : isSlugInvalid
+  const isRoomIdInvalid = !isNameEmpty && !roomIdPreview;
+  const roomIdMessage = isNameEmpty
+    ? "Enter a name to preview the room ID"
+    : isRoomIdInvalid
       ? "Name must include at least one letter or number"
-      : `/${slugPreview}`;
+      : `Room: ${roomIdPreview}`;
 
   return (
     <>
@@ -68,11 +69,12 @@ export function ProjectDialogs({ state }: ProjectDialogsProps) {
             <p
               className={cn(
                 "text-xs",
-                isSlugInvalid ? "text-error" : "text-copy-muted"
+                isRoomIdInvalid ? "text-error" : "text-copy-muted"
               )}
             >
-              {slugMessage}
+              {roomIdMessage}
             </p>
+            {error ? <p className="text-xs text-error">{error}</p> : null}
           </form>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>
@@ -80,7 +82,7 @@ export function ProjectDialogs({ state }: ProjectDialogsProps) {
             </DialogClose>
             <Button
               onClick={submitCreate}
-              disabled={isNameEmpty || isSlugInvalid || isLoading}
+              disabled={isNameEmpty || isRoomIdInvalid || isLoading}
             >
               {isLoading ? "Creating…" : "Create project"}
             </Button>
@@ -113,23 +115,15 @@ export function ProjectDialogs({ state }: ProjectDialogsProps) {
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
-            <p
-              className={cn(
-                "mt-2 text-xs",
-                isSlugInvalid ? "text-error" : "text-copy-muted"
-              )}
-            >
-              {slugMessage}
-            </p>
+            {error ? (
+              <p className="mt-2 text-xs text-error">{error}</p>
+            ) : null}
           </form>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>
               Cancel
             </DialogClose>
-            <Button
-              onClick={submitRename}
-              disabled={isNameEmpty || isSlugInvalid || isLoading}
-            >
+            <Button onClick={submitRename} disabled={isNameEmpty || isLoading}>
               {isLoading ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>
@@ -149,6 +143,7 @@ export function ProjectDialogs({ state }: ProjectDialogsProps) {
                 : null}
             </DialogDescription>
           </DialogHeader>
+          {error ? <p className="text-xs text-error">{error}</p> : null}
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>
               Cancel

@@ -1,6 +1,7 @@
-export interface Project {
+export type ProjectRole = "owner" | "collaborator";
+
+export interface ProjectSummary {
   id: string;
   name: string;
-  slug: string;
-  role: "owner" | "collaborator";
+  role: ProjectRole;
 }
