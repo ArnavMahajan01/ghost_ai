@@ -50,6 +50,10 @@ export function ProjectSidebar({
 
       <aside
         aria-hidden={!isOpen}
+        // `aria-hidden` alone doesn't remove descendants from the tab order —
+        // `inert` does, so keyboard users can't focus project links while
+        // the sidebar is off screen.
+        inert={!isOpen}
         className={cn(
           "absolute top-0 left-0 z-40 flex h-full w-72 flex-col border-r border-surface-border bg-surface/95 backdrop-blur-sm transition-transform duration-200 ease-in-out",
           isOpen ? "translate-x-0" : "-translate-x-full"
@@ -95,7 +99,7 @@ export function ProjectSidebar({
                       <Link
                         href={`/editor/${project.id}`}
                         className={cn(
-                          "truncate text-sm text-copy-primary",
+                          "min-w-0 flex-1 truncate text-sm text-copy-primary",
                           project.id === activeProjectId && "font-medium"
                         )}
                       >
@@ -161,7 +165,7 @@ export function ProjectSidebar({
                       <Link
                         href={`/editor/${project.id}`}
                         className={cn(
-                          "truncate text-sm text-copy-primary",
+                          "min-w-0 flex-1 truncate text-sm text-copy-primary",
                           project.id === activeProjectId && "font-medium"
                         )}
                       >

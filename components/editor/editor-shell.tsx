@@ -7,6 +7,7 @@ import { AiSidebar } from "@/components/editor/ai-sidebar";
 import { EditorNavbar } from "@/components/editor/editor-navbar";
 import { ProjectSidebar } from "@/components/editor/project-sidebar";
 import { ProjectDialogs } from "@/components/projects/project-dialogs";
+import { ShareDialog } from "@/components/projects/share-dialog";
 import { Button } from "@/components/ui/button";
 import { useProjectActions } from "@/hooks/use-project-actions";
 import type { ProjectSummary } from "@/types/project";
@@ -25,6 +26,7 @@ export function EditorShell({
 }: EditorShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAiSidebarOpen, setIsAiSidebarOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const actions = useProjectActions({ activeProjectId: activeProject?.id });
 
   return (
@@ -40,6 +42,7 @@ export function EditorShell({
                 variant="ghost"
                 size="icon-sm"
                 aria-label="Share project"
+                onClick={() => setIsShareOpen(true)}
               >
                 <Share2 className="h-4 w-4" />
               </Button>
@@ -110,6 +113,15 @@ export function EditorShell({
       </div>
 
       <ProjectDialogs state={actions} />
+
+      {activeProject ? (
+        <ShareDialog
+          projectId={activeProject.id}
+          role={activeProject.role}
+          open={isShareOpen}
+          onOpenChange={setIsShareOpen}
+        />
+      ) : null}
     </div>
   );
 }

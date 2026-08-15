@@ -19,7 +19,10 @@ export async function getUserProjects(
     }),
     email
       ? prisma.project.findMany({
-          where: { collaborators: { some: { email } } },
+          where: {
+            ownerId: { not: userId },
+            collaborators: { some: { email } },
+          },
           orderBy: { createdAt: "desc" },
           select: { id: true, name: true },
         })
