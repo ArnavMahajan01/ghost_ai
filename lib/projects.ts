@@ -34,35 +34,3 @@ export async function getUserProjects(
     })),
   };
 }
-
-/**
- * Fetches a single project for the workspace page, scoped to viewers who
- * either own it or are a collaborator on it. Returns `null` if the project
- * doesn't exist or the current user has no access to it.
- */
-export async function getProjectForViewer(
-  projectId: string,
-  userId: string,
-  email: string | null
-) {
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-    select: {
-      id: true,
-      name: true,
-      ownerId: true,
-      collaborators: email ? { where: { email }, select: { id: true } } : false,
-    },
-  });
-
-  if (!project) return null;
-
-  const isOwner = project.ownerId === userId;
-  const isCollaborator = (project.collaborators?.length ?? 0) > 0;
-
-  if (!isOwner && !isCollaborator) return null;
-
-  const role: ProjectSummary["role"] = isOwner ? "owner" : "collaborator";
-
-  return { id: project.id, name: project.name, role };
-}
