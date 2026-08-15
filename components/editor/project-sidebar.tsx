@@ -20,6 +20,8 @@ interface ProjectSidebarProps {
   onClose: () => void;
   ownedProjects: ProjectSummary[];
   sharedProjects: ProjectSummary[];
+  /** The project id of the currently open workspace, if any — highlighted in the list. */
+  activeProjectId?: string;
   onCreateProject: () => void;
   onRenameProject: (project: ProjectSummary) => void;
   onDeleteProject: (project: ProjectSummary) => void;
@@ -30,6 +32,7 @@ export function ProjectSidebar({
   onClose,
   ownedProjects,
   sharedProjects,
+  activeProjectId,
   onCreateProject,
   onRenameProject,
   onDeleteProject,
@@ -84,11 +87,17 @@ export function ProjectSidebar({
                   {ownedProjects.map((project) => (
                     <li
                       key={project.id}
-                      className="group flex items-center justify-between gap-2 rounded-xl px-2.5 py-2 hover:bg-elevated"
+                      className={cn(
+                        "group flex items-center justify-between gap-2 rounded-xl px-2.5 py-2 hover:bg-elevated",
+                        project.id === activeProjectId && "bg-elevated"
+                      )}
                     >
                       <Link
                         href={`/editor/${project.id}`}
-                        className="truncate text-sm text-copy-primary"
+                        className={cn(
+                          "truncate text-sm text-copy-primary",
+                          project.id === activeProjectId && "font-medium"
+                        )}
                       >
                         {project.name}
                       </Link>
@@ -144,11 +153,17 @@ export function ProjectSidebar({
                   {sharedProjects.map((project) => (
                     <li
                       key={project.id}
-                      className="flex items-center gap-2 rounded-xl px-2.5 py-2 hover:bg-elevated"
+                      className={cn(
+                        "flex items-center gap-2 rounded-xl px-2.5 py-2 hover:bg-elevated",
+                        project.id === activeProjectId && "bg-elevated"
+                      )}
                     >
                       <Link
                         href={`/editor/${project.id}`}
-                        className="truncate text-sm text-copy-primary"
+                        className={cn(
+                          "truncate text-sm text-copy-primary",
+                          project.id === activeProjectId && "font-medium"
+                        )}
                       >
                         {project.name}
                       </Link>

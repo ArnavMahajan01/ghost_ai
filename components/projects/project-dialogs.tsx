@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { UseProjectActionsReturn } from "@/hooks/use-project-actions";
+import { UseProjectActionsReturn } from "@/hooks/use-project-actions";
 import { cn } from "@/lib/utils";
 
 interface ProjectDialogsProps {
