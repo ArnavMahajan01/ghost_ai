@@ -19,6 +19,7 @@
 
 # production
 /build
+/context/current-issues.md
 
 # misc
 .DS_Store
