@@ -1,6 +1,6 @@
 "use client";
 
-import { useCanRedo, useCanUndo, useRedo, useUndo } from "@liveblocks/react";
+import { useCanRedo, useCanUndo, useMyPresence, useRedo, useUndo } from "@liveblocks/react";
 import { useLiveblocksFlow } from "@liveblocks/react-flow";
 import {
   Background,
@@ -9,21 +9,35 @@ import {
   ConnectionMode,
   MarkerType,
   ReactFlow,
+  useEdges,
+  useNodes,
   useReactFlow,
   type Connection,
   type EdgeTypes,
   type NodeTypes,
   type XYPosition,
 } from "@xyflow/react";
-import { useCallback, useEffect, useMemo, useRef, type DragEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  type DragEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
 
 import { CanvasControls } from "@/components/editor/canvas-controls";
+import { CanvasCursors } from "@/components/editor/canvas-cursors";
 import { CanvasEdgeRenderer } from "@/components/editor/canvas-edge";
 import { CanvasMinimap } from "@/components/editor/canvas-minimap";
 import { CanvasNodeRenderer } from "@/components/editor/canvas-node";
+import { PresenceAvatars } from "@/components/editor/presence-avatars";
 import { ShapePanel } from "@/components/editor/shape-panel";
 import type { CanvasTemplate } from "@/components/editor/starter-templates";
 import { StarterTemplatesModal } from "@/components/editor/starter-templates-modal";
+import { useCanvasAutosave, type SaveStatus } from "@/hooks/use-canvas-autosave";
+import { useCanvasLoad } from "@/hooks/use-canvas-load";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import {
   createEdgeId,
@@ -49,8 +63,11 @@ const edgeTypes: EdgeTypes = { canvasEdge: CanvasEdgeRenderer };
 const EDGE_MARKER_END = { type: MarkerType.ArrowClosed, color: "rgba(225, 225, 235, 0.7)" };
 
 interface CanvasProps {
+  projectId: string;
   isTemplatesModalOpen: boolean;
   onTemplatesModalOpenChange: (open: boolean) => void;
+  /** Reports the autosave hook's current status and a manual save trigger up to the navbar's Save button, which lives outside this Liveblocks-room subtree entirely. */
+  onAutosaveStateChange: (state: { status: SaveStatus; saveNow: () => void }) => void;
 }
 
 /**
@@ -59,7 +76,12 @@ interface CanvasProps {
  * `useLiveblocksFlow`'s suspense mode throws while the room's storage is
  * still loading.
  */
-export function Canvas({ isTemplatesModalOpen, onTemplatesModalOpenChange }: CanvasProps) {
+export function Canvas({
+  projectId,
+  isTemplatesModalOpen,
+  onTemplatesModalOpenChange,
+  onAutosaveStateChange,
+}: CanvasProps) {
   const { nodes, edges, onNodesChange, onEdgesChange, onDelete } =
     useLiveblocksFlow<CanvasNode, CanvasEdge>({
       suspense: true,
@@ -70,6 +92,29 @@ export function Canvas({ isTemplatesModalOpen, onTemplatesModalOpenChange }: Can
   const { screenToFlowPosition, fitView } = reactFlowInstance;
   const wrapperRef = useRef<HTMLDivElement>(null);
   const pendingFitViewRef = useRef(false);
+
+  // Load a previously-saved canvas in if (and only if) the room starts
+  // empty, then gate autosave on that check having finished — otherwise an
+  // autosave could fire before the load even runs and stomp the saved
+  // canvas with an empty one.
+  const { isLoadComplete } = useCanvasLoad({
+    projectId,
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    fitView,
+  });
+  const { status: saveStatus, saveNow } = useCanvasAutosave({
+    projectId,
+    nodes,
+    edges,
+    enabled: isLoadComplete,
+  });
+
+  useEffect(() => {
+    onAutosaveStateChange({ status: saveStatus, saveNow });
+  }, [saveStatus, saveNow, onAutosaveStateChange]);
 
   // Normalizes any edges saved before 16-edge-behavior.md's handle rename —
   // see `normalizeEdgeHandles` for why. Only affects what gets rendered;
@@ -82,6 +127,72 @@ export function Canvas({ isTemplatesModalOpen, onTemplatesModalOpenChange }: Can
   const canRedo = useCanRedo();
 
   useKeyboardShortcuts({ reactFlowInstance, onUndo: undo, onRedo: redo });
+
+  // `useNodes`/`useEdges` read straight from React Flow's own live store
+  // (always current, no stale-closure risk) rather than reusing the
+  // `nodes`/`edges` already destructured above — deletion needs to know
+  // exactly what's selected *right now*, not whatever snapshot the last
+  // Liveblocks render passed down.
+  const liveNodes = useNodes<CanvasNode>();
+  const liveEdges = useEdges<CanvasEdge>();
+
+  // Deliberately not React Flow's `deleteKeyCode`/built-in keyboard
+  // deletion — deletions must go through `onNodesChange`/`onEdgesChange`
+  // (the same Liveblocks collaborative mutation helpers every other
+  // canvas mutation already uses) so they sync to every connected client.
+  const handleCanvasKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      const selectedNodes = liveNodes.filter((node) => node.selected);
+      const selectedEdges = liveEdges.filter((edge) => edge.selected);
+
+      if (selectedNodes.length === 0 && selectedEdges.length === 0) return;
+
+      event.preventDefault();
+
+      if (selectedNodes.length > 0) {
+        onNodesChange(
+          selectedNodes.map((node) => ({ type: "remove" as const, id: node.id }))
+        );
+      }
+      if (selectedEdges.length > 0) {
+        onEdgesChange(
+          selectedEdges.map((edge) => ({ type: "remove" as const, id: edge.id }))
+        );
+      }
+    },
+    [liveNodes, liveEdges, onNodesChange, onEdgesChange]
+  );
+
+  const [, updateMyPresence] = useMyPresence();
+
+  // Broadcasts the current user's cursor position in flow-space coordinates
+  // (via `screenToFlowPosition`, same conversion `handleDrop` already uses)
+  // so it pans/zooms correctly for everyone else — see `CanvasCursors`,
+  // which renders every *other* participant's cursor inside a
+  // `ViewportPortal` using this same coordinate space.
+  const handlePaneMouseMove = useCallback(
+    (event: ReactMouseEvent) => {
+      const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      updateMyPresence({ cursor: position });
+    },
+    [screenToFlowPosition, updateMyPresence]
+  );
+
+  const handlePaneMouseLeave = useCallback(() => {
+    updateMyPresence({ cursor: null });
+  }, [updateMyPresence]);
 
   // `useLiveblocksFlow`'s own `onConnect` builds a plain untyped edge via
   // `addEdge`, with no way to make it a `canvasEdge` — so new connections
@@ -172,10 +283,23 @@ export function Canvas({ isTemplatesModalOpen, onTemplatesModalOpenChange }: Can
         return;
       }
 
-      const position = screenToFlowPosition({
+      // `screenToFlowPosition` already accounts for the canvas container's
+      // bounding rect and the current pan/zoom, converting the cursor's
+      // screen coordinates into flow space — but that gives the point
+      // under the cursor, not the node's top-left corner. The shape
+      // panel's drag ghost is centered under the cursor the whole time
+      // (`setDragImage(preview, width / 2, height / 2)`), so the drop
+      // itself needs the same centering, same as `handleAddShape` below,
+      // or the node visibly lands down-and-right of the cursor instead of
+      // centered on it.
+      const cursorPosition = screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
       });
+      const position = {
+        x: cursorPosition.x - payload.width / 2,
+        y: cursorPosition.y - payload.height / 2,
+      };
 
       addNode(payload.shape, position, payload.width, payload.height);
     },
@@ -210,6 +334,7 @@ export function Canvas({ isTemplatesModalOpen, onTemplatesModalOpenChange }: Can
       className="relative flex-1"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
+      onKeyDown={handleCanvasKeyDown}
     >
       <ReactFlow
         nodes={nodes}
@@ -220,16 +345,20 @@ export function Canvas({ isTemplatesModalOpen, onTemplatesModalOpenChange }: Can
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
         onDelete={onDelete}
+        deleteKeyCode={null}
         connectionMode={ConnectionMode.Loose}
         connectionLineType={ConnectionLineType.SmoothStep}
-        fitView
+        onPaneMouseMove={handlePaneMouseMove}
+        onPaneMouseLeave={handlePaneMouseLeave}
         colorMode="dark"
       >
         <Background variant={BackgroundVariant.Dots} />
         <CanvasMinimap />
+        <CanvasCursors />
       </ReactFlow>
       <CanvasControls canUndo={canUndo} canRedo={canRedo} onUndo={undo} onRedo={redo} />
       <ShapePanel onAddShape={handleAddShape} />
+      <PresenceAvatars />
       <StarterTemplatesModal
         open={isTemplatesModalOpen}
         onOpenChange={onTemplatesModalOpenChange}
