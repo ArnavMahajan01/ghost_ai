@@ -21,6 +21,14 @@ export interface DesignAgentPayload {
   roomId: string;
 }
 
+// The AI's presence avatar — same ghost mark as `app/icon.svg`/
+// `components/icons/ghost-icon.tsx`, just inlined as a data URI since
+// `userInfo.avatar` needs a plain URL string, not a React component. A
+// solid `--bg-base` backdrop is baked in (unlike the transparent app icon)
+// so it reads cleanly inside `PresenceAvatars`' round, `object-cover`d `<img>`.
+const AI_AVATAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" fill="#080809"/><path d="M6 12a6 6 0 0 1 12 0v9l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5z" fill="#00C8D4"/><circle cx="9.9" cy="12.6" r="1.15" fill="#080809"/><circle cx="14.1" cy="12.6" r="1.15" fill="#080809"/></svg>`;
+const AI_AVATAR_DATA_URI = `data:image/svg+xml,${encodeURIComponent(AI_AVATAR_SVG)}`;
+
 // The AI is presented to collaborators as an ephemeral, unauthenticated
 // participant — same `Presence`/`UserMeta` shape a real Clerk user gets,
 // issued via `liveblocks.setPresence` instead of a WebSocket connection. See
@@ -28,7 +36,7 @@ export interface DesignAgentPayload {
 const AI_USER_ID = "ai-agent";
 const AI_USER_INFO = {
   name: "Ghost AI",
-  avatar: "",
+  avatar: AI_AVATAR_DATA_URI,
   color: getCursorColor(AI_USER_ID),
 };
 // Refreshed on every presence update while the task runs; short enough that

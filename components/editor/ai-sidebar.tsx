@@ -3,10 +3,11 @@
 import { useUser } from "@clerk/nextjs";
 import { useCreateFeed, useCreateFeedMessage, useFeedMessages, useRoom } from "@liveblocks/react";
 import { useRealtimeRun } from "@trigger.dev/react-hooks";
-import { AlertCircle, Bot, Download, Loader2, Send, Sparkles, FileText, X } from "lucide-react";
+import { AlertCircle, Download, Loader2, Send, Sparkles, FileText, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type KeyboardEvent } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 
+import { GhostIcon } from "@/components/icons/ghost-icon";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -144,7 +145,7 @@ function AiSidebarHeader({ onClose }: { onClose: () => void }) {
   return (
     <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-surface-border px-4">
       <div className="flex items-center gap-2">
-        <Bot className="h-4 w-4 shrink-0 text-ai" />
+        <GhostIcon className="h-4 w-4 shrink-0 text-ai" />
         <div className="flex flex-col leading-tight">
           <h2 className="text-sm font-medium text-copy-primary">AI Workspace</h2>
           <p className="text-xs text-copy-muted">Collaborate with Ghost AI</p>
@@ -394,7 +395,7 @@ interface AiArchitectEmptyStateProps {
 function AiArchitectEmptyState({ onPromptClick }: AiArchitectEmptyStateProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-3 py-10 text-center">
-      <Bot className="h-8 w-8 text-ai" />
+      <GhostIcon className="h-8 w-8 text-ai" />
       <p className="text-sm text-copy-secondary">
         Describe the system you want to build and Ghost AI will help design it.
       </p>
