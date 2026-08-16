@@ -116,7 +116,12 @@ export function EditorShell({
               isTemplatesModalOpen={isTemplatesOpen}
               onTemplatesModalOpenChange={setIsTemplatesOpen}
               onAutosaveStateChange={handleAutosaveStateChange}
-            />
+            >
+              <AiSidebar
+                isOpen={isAiSidebarOpen}
+                onClose={() => setIsAiSidebarOpen(false)}
+              />
+            </CanvasRoom>
           </main>
         ) : (
           <main className="flex flex-1 flex-col items-center justify-center gap-2 bg-base px-4 text-center">
@@ -135,13 +140,6 @@ export function EditorShell({
             </Button>
           </main>
         )}
-
-        {activeProject ? (
-          <AiSidebar
-            isOpen={isAiSidebarOpen}
-            onClose={() => setIsAiSidebarOpen(false)}
-          />
-        ) : null}
       </div>
 
       <ProjectDialogs state={actions} />

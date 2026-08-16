@@ -32,14 +32,12 @@ declare global {
     };
 
     // Custom events, for useBroadcastEvent, useEventListener
-    // Published by `trigger/design-agent.ts` (via `liveblocks.broadcastEvent`)
-    // as a shared status feed for the AI design agent's progress.
-    RoomEvent:
-      | {
-          type: "ai-status";
-          status: "started" | "thinking" | "generating" | "complete" | "error";
-          message: string;
-        };
+    // AI activity status is published to the `ai-status-feed` Liveblocks
+    // feed instead (see `types/tasks.ts`, `trigger/design-agent.ts`) — a
+    // feed is the purpose-built primitive for "the latest message in a
+    // named stream", so RoomEvent stays unused rather than duplicating it.
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- unused until RoomEvents are speced
+    RoomEvent: {};
 
     // Custom metadata set on threads, for useThreads, useCreateThread, etc.
     // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- unused until ThreadMetadata is speced

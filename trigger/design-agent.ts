@@ -5,6 +5,8 @@ import { logger, task } from "@trigger.dev/sdk";
 import { z } from "zod";
 
 import { getCursorColor, liveblocks } from "@/lib/liveblocks";
+import { AI_STATUS_FEED_ID } from "@/types/tasks";
+import type { AiStatus, AiStatusFeedMessage } from "@/types/tasks";
 import {
   MIN_NODE_HEIGHT,
   MIN_NODE_WIDTH,
@@ -37,13 +39,26 @@ const AI_PRESENCE_TTL_SECONDS = 45;
 // AI presence as close to immediately as the API allows once the run ends.
 const AI_PRESENCE_CLEAR_TTL_SECONDS = 2;
 
-/** Publishes one step of AI progress to the room's shared status feed (`RoomEvent`, see `liveblocks.config.ts`). */
-async function publishStatus(
-  roomId: string,
-  status: "started" | "thinking" | "generating" | "complete" | "error",
-  message: string
-) {
-  await liveblocks.broadcastEvent(roomId, { type: "ai-status", status, message });
+/**
+ * Creates the room's `ai-status-feed` Liveblocks feed if it doesn't already
+ * exist — "create or reuse", per `context/feature-specs/24-ai-presence-state.md`.
+ * A 409 (already exists) is the expected steady-state outcome once the feed
+ * has been created once for a room, so it's swallowed rather than treated
+ * as a failure; any other error still propagates.
+ */
+async function ensureAiStatusFeed(roomId: string): Promise<void> {
+  try {
+    await liveblocks.createFeed({ roomId, feedId: AI_STATUS_FEED_ID });
+  } catch (error) {
+    const status = error instanceof Error && "status" in error ? (error as { status?: number }).status : undefined;
+    if (status !== 409) throw error;
+  }
+}
+
+/** Publishes one step of AI progress as a message on the room's shared `ai-status-feed` (see `types/tasks.ts`). */
+async function publishStatus(roomId: string, status: AiStatus, text?: string) {
+  const data: AiStatusFeedMessage = { status, text };
+  await liveblocks.createFeedMessage({ roomId, feedId: AI_STATUS_FEED_ID, data });
 }
 
 async function setAiPresence(roomId: string, thinking: boolean, cursor: { x: number; y: number } | null) {
@@ -465,10 +480,11 @@ export const designAgentTask = task({
       // The room is normally created lazily on first Liveblocks auth (see
       // `app/api/liveblocks-auth/route.ts`) once a user actually opens the
       // canvas — but this task can in principle run for a room nobody has
-      // opened yet, and `setPresence`/`broadcastEvent`/`mutateStorage` all
+      // opened yet, and `setPresence`/`createFeedMessage`/`mutateStorage` all
       // 404 against a room that doesn't exist. `getOrCreateRoom` is a no-op
       // if it's already there, so this is safe to call unconditionally.
       await liveblocks.getOrCreateRoom(roomId, { defaultAccesses: ["room:write"] });
+      await ensureAiStatusFeed(roomId);
 
       await Promise.all([
         publishStatus(roomId, "started", "Reading the current canvas…"),

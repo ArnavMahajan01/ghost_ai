@@ -2,7 +2,7 @@
 
 import { useOthers } from "@liveblocks/react";
 import { ViewportPortal } from "@xyflow/react";
-import { MousePointer2 } from "lucide-react";
+import { Loader2, MousePointer2 } from "lucide-react";
 
 /**
  * Live cursors for every other room participant — rendered inside
@@ -23,6 +23,7 @@ export function CanvasCursors() {
 
         const color = other.info?.color ?? "#888888";
         const name = other.info?.name ?? "Anonymous";
+        const isThinking = other.presence.thinking === true;
 
         return (
           <div
@@ -35,9 +36,10 @@ export function CanvasCursors() {
               style={{ color, fill: color }}
             />
             <span
-              className="ml-3 rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap text-white"
+              className="ml-3 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap text-white"
               style={{ backgroundColor: color }}
             >
+              {isThinking ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
               {name}
             </span>
           </div>

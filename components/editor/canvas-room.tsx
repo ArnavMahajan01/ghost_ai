@@ -4,6 +4,7 @@ import { LiveMap, LiveObject } from "@liveblocks/client";
 import { ClientSideSuspense, LiveblocksProvider, RoomProvider } from "@liveblocks/react/suspense";
 import { ReactFlowProvider } from "@xyflow/react";
 import { Loader2 } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { Canvas } from "@/components/editor/canvas";
 import { CanvasErrorBoundary } from "@/components/editor/canvas-error-boundary";
@@ -14,6 +15,14 @@ interface CanvasRoomProps {
   isTemplatesModalOpen: boolean;
   onTemplatesModalOpenChange: (open: boolean) => void;
   onAutosaveStateChange: (state: { status: SaveStatus; saveNow: () => void }) => void;
+  /**
+   * Rendered inside the same `RoomProvider` as `Canvas`, but outside its
+   * `ClientSideSuspense` boundary — for UI (the AI sidebar) that needs this
+   * room's Liveblocks context (e.g. `useFeedMessages`) without waiting on
+   * the canvas's own storage-load suspense, and without opening a second
+   * connection to the same room.
+   */
+  children?: ReactNode;
 }
 
 function CanvasLoading() {
@@ -36,6 +45,7 @@ export function CanvasRoom({
   isTemplatesModalOpen,
   onTemplatesModalOpenChange,
   onAutosaveStateChange,
+  children,
 }: CanvasRoomProps) {
   return (
     <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
@@ -56,6 +66,7 @@ export function CanvasRoom({
             </ReactFlowProvider>
           </ClientSideSuspense>
         </CanvasErrorBoundary>
+        {children}
       </RoomProvider>
     </LiveblocksProvider>
   );
