@@ -23,7 +23,6 @@ import {
   useMemo,
   useRef,
   type DragEvent,
-  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
 } from "react";
 
@@ -140,8 +139,16 @@ export function Canvas({
   // deletion — deletions must go through `onNodesChange`/`onEdgesChange`
   // (the same Liveblocks collaborative mutation helpers every other
   // canvas mutation already uses) so they sync to every connected client.
-  const handleCanvasKeyDown = useCallback(
-    (event: ReactKeyboardEvent<HTMLDivElement>) => {
+  //
+  // A `window`-level listener rather than a div `onKeyDown` — the latter
+  // only fires when the canvas wrapper (or a focused descendant) actually
+  // has DOM focus, which clicking a node to select it doesn't reliably
+  // grant (Safari in particular never focuses a plain element on click,
+  // only via Tab), so Delete/Backspace could silently no-op after a click.
+  // Same fix `hooks/use-keyboard-shortcuts.ts` already relies on for
+  // zoom/undo/redo.
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
       if (event.key !== "Delete" && event.key !== "Backspace") return;
 
       const target = event.target;
@@ -171,9 +178,11 @@ export function Canvas({
           selectedEdges.map((edge) => ({ type: "remove" as const, id: edge.id }))
         );
       }
-    },
-    [liveNodes, liveEdges, onNodesChange, onEdgesChange]
-  );
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [liveNodes, liveEdges, onNodesChange, onEdgesChange]);
 
   const [, updateMyPresence] = useMyPresence();
 
@@ -334,7 +343,6 @@ export function Canvas({
       className="relative flex-1"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
-      onKeyDown={handleCanvasKeyDown}
     >
       <ReactFlow
         nodes={nodes}
