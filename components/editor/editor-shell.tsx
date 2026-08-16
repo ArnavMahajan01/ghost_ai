@@ -1,6 +1,6 @@
 "use client";
 
-import { PanelRightClose, PanelRightOpen, Plus, Share2 } from "lucide-react";
+import { LayoutTemplate, PanelRightClose, PanelRightOpen, Plus, Share2 } from "lucide-react";
 import { useState } from "react";
 
 import { AiSidebar } from "@/components/editor/ai-sidebar";
@@ -28,6 +28,7 @@ export function EditorShell({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAiSidebarOpen, setIsAiSidebarOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
   const actions = useProjectActions({ activeProjectId: activeProject?.id });
 
   return (
@@ -39,6 +40,14 @@ export function EditorShell({
         actions={
           activeProject ? (
             <>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Starter templates"
+                onClick={() => setIsTemplatesOpen(true)}
+              >
+                <LayoutTemplate className="h-4 w-4" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -80,7 +89,11 @@ export function EditorShell({
 
         {activeProject ? (
           <main className="flex flex-1 bg-base">
-            <CanvasRoom roomId={activeProject.id} />
+            <CanvasRoom
+              roomId={activeProject.id}
+              isTemplatesModalOpen={isTemplatesOpen}
+              onTemplatesModalOpenChange={setIsTemplatesOpen}
+            />
           </main>
         ) : (
           <main className="flex flex-1 flex-col items-center justify-center gap-2 bg-base px-4 text-center">

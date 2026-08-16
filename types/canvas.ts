@@ -73,5 +73,10 @@ export interface CanvasNodeData extends Record<string, unknown> {
 /** The canvas's custom React Flow node type — no custom rendering yet, see spec's scope limits. */
 export type CanvasNode = Node<CanvasNodeData, "canvasNode">;
 
-/** The canvas's custom React Flow edge type — no custom rendering yet, see spec's scope limits. */
-export type CanvasEdge = Edge<Record<string, never>, "canvasEdge">;
+/** Data carried by every canvas edge. */
+export interface CanvasEdgeData extends Record<string, unknown> {
+  label: string;
+}
+
+/** The canvas's custom React Flow edge type — see `components/editor/canvas-edge.tsx`. */
+export type CanvasEdge = Edge<CanvasEdgeData, "canvasEdge">;

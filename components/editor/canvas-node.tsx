@@ -3,12 +3,14 @@
 import {
   Handle,
   NodeResizer,
+  NodeToolbar,
   Position,
   useReactFlow,
   type NodeProps,
 } from "@xyflow/react";
-import { useCallback, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { useCallback, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
 
+import { cn } from "@/lib/utils";
 import {
   DEFAULT_NODE_COLOR,
   MIN_NODE_HEIGHT,
@@ -17,12 +19,58 @@ import {
 } from "@/types/canvas";
 import type { CanvasEdge, CanvasNode, NodeShape } from "@/types/canvas";
 
+/** Small white dot with a dark border — hidden until the node is hovered. */
+const CONNECTION_HANDLE_STYLE: CSSProperties = {
+  width: 8,
+  height: 8,
+  backgroundColor: "#FFFFFF",
+  border: "1px solid rgba(10, 10, 12, 0.85)",
+};
+const CONNECTION_HANDLE_CLASS =
+  "opacity-0 transition-opacity duration-150 group-hover:opacity-100";
+
+/**
+ * All four handles are declared `type="source"`, not alternating
+ * source/target by position. `@xyflow/system`'s `getEdgePosition` always
+ * resolves an edge's *source* endpoint from a node's `source`-typed handle
+ * bounds only — even in `ConnectionMode.Loose`, which only relaxes the
+ * *target* side (matching a source- or target-typed handle there). So a
+ * `target`-typed handle can never start a connection under any mode; with
+ * every position typed `source`, Loose mode's lenient target-side lookup
+ * (source or target handles both accepted) still lets any of these serve as
+ * a drop target too — the combination that actually makes every handle
+ * usable as both a connection start and end point, per spec.
+ */
 const HANDLES = (
   <>
-    <Handle id="top-target" type="target" position={Position.Top} />
-    <Handle id="right-source" type="source" position={Position.Right} />
-    <Handle id="bottom-target" type="target" position={Position.Bottom} />
-    <Handle id="left-source" type="source" position={Position.Left} />
+    <Handle
+      id="top"
+      type="source"
+      position={Position.Top}
+      className={CONNECTION_HANDLE_CLASS}
+      style={CONNECTION_HANDLE_STYLE}
+    />
+    <Handle
+      id="right"
+      type="source"
+      position={Position.Right}
+      className={CONNECTION_HANDLE_CLASS}
+      style={CONNECTION_HANDLE_STYLE}
+    />
+    <Handle
+      id="bottom"
+      type="source"
+      position={Position.Bottom}
+      className={CONNECTION_HANDLE_CLASS}
+      style={CONNECTION_HANDLE_STYLE}
+    />
+    <Handle
+      id="left"
+      type="source"
+      position={Position.Left}
+      className={CONNECTION_HANDLE_CLASS}
+      style={CONNECTION_HANDLE_STYLE}
+    />
   </>
 );
 
@@ -113,6 +161,50 @@ function LabelEditor({ value, textColor, onChange, onDone }: LabelEditorProps) {
   );
 }
 
+interface ColorToolbarProps {
+  nodeId: string;
+  activeFill: string;
+  onSelect: (fill: string) => void;
+}
+
+/**
+ * Floating toolbar shown above a selected node — one swatch per
+ * `NODE_COLORS` pair. `NodeToolbar` already only renders when its node is
+ * selected and positions itself above the node without overlapping it, so
+ * no visibility/positioning logic needed here beyond that default.
+ */
+function ColorToolbar({ nodeId, activeFill, onSelect }: ColorToolbarProps) {
+  return (
+    <NodeToolbar
+      nodeId={nodeId}
+      className="nodrag nopan flex items-center gap-1 rounded-full border border-surface-border bg-surface/90 p-1.5 shadow-lg backdrop-blur-sm"
+    >
+      {NODE_COLORS.map((color) => {
+        const isActive = color.fill === activeFill;
+        return (
+          <button
+            key={color.fill}
+            type="button"
+            onClick={() => onSelect(color.fill)}
+            aria-label={`Set node color to ${color.text}`}
+            aria-pressed={isActive}
+            className={cn(
+              "h-5 w-5 shrink-0 rounded-full transition-shadow duration-150 hover:shadow-[0_0_6px_0px_var(--glow-color)]",
+              isActive ? "border-2 border-copy-primary" : "border border-white/10"
+            )}
+            style={
+              {
+                backgroundColor: color.fill,
+                "--glow-color": color.text,
+              } as CSSProperties
+            }
+          />
+        );
+      })}
+    </NodeToolbar>
+  );
+}
+
 /**
  * Renderer for the `canvasNode` type. Rectangle/circle/pill are plain
  * bordered divs (border-radius alone draws them); diamond/hexagon/cylinder
@@ -156,9 +248,20 @@ export function CanvasNodeRenderer({ id, data, selected }: NodeProps<CanvasNode>
     />
   );
 
+  const colorToolbar = (
+    <ColorToolbar
+      nodeId={id}
+      activeFill={fill}
+      onSelect={(color) => updateNodeData(id, { color })}
+    />
+  );
+
   const labelOverlay = (
+    // Inset off the node's edges (not flush `inset-0`) so this catches
+    // double-clicks over the label without sitting on top of the
+    // connection handles, which are centered right on the border.
     <div
-      className="absolute inset-0 flex items-center justify-center px-4 text-center"
+      className="absolute inset-2 flex items-center justify-center px-4 text-center"
       onDoubleClick={startEditing}
     >
       {isEditing ? (
@@ -178,10 +281,11 @@ export function CanvasNodeRenderer({ id, data, selected }: NodeProps<CanvasNode>
   if (radius) {
     return (
       <div
-        className="relative h-full w-full border"
+        className="group relative h-full w-full border"
         style={{ backgroundColor: fill, borderColor: stroke, borderRadius: radius }}
       >
         {resizer}
+        {colorToolbar}
         {HANDLES}
         {labelOverlay}
       </div>
@@ -191,7 +295,7 @@ export function CanvasNodeRenderer({ id, data, selected }: NodeProps<CanvasNode>
   const points = POLYGON_POINTS[data.shape];
   if (points) {
     return (
-      <div className="relative h-full w-full">
+      <div className="group relative h-full w-full">
         <svg
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
@@ -200,6 +304,7 @@ export function CanvasNodeRenderer({ id, data, selected }: NodeProps<CanvasNode>
           <polygon points={points} fill={fill} stroke={stroke} strokeWidth={2} />
         </svg>
         {resizer}
+        {colorToolbar}
         {HANDLES}
         {labelOverlay}
       </div>
@@ -208,7 +313,7 @@ export function CanvasNodeRenderer({ id, data, selected }: NodeProps<CanvasNode>
 
   // Cylinder — a body with curved top/bottom caps plus a rim line for the lid.
   return (
-    <div className="relative h-full w-full">
+    <div className="group relative h-full w-full">
       <svg
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
@@ -228,6 +333,7 @@ export function CanvasNodeRenderer({ id, data, selected }: NodeProps<CanvasNode>
         />
       </svg>
       {resizer}
+      {colorToolbar}
       {HANDLES}
       {labelOverlay}
     </div>
