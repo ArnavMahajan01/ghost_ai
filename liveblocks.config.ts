@@ -1,3 +1,7 @@
+import type { LiveblocksFlow } from "@liveblocks/react-flow";
+
+import type { CanvasEdge, CanvasNode } from "./types/canvas";
+
 // Define Liveblocks types for your application
 // https://liveblocks.io/docs/api-reference/liveblocks-react#Typing-your-data
 declare global {
@@ -5,14 +9,16 @@ declare global {
     // Each user's Presence, for useMyPresence, useOthers, etc.
     Presence: {
       cursor: { x: number; y: number } | null;
-      isThinking: boolean;
+      thinking: boolean;
     };
 
     // The Storage tree for the room, for useMutation, useStorage, etc.
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- unused until Storage is speced
+    // `flow` is managed by `useLiveblocksFlow` (`@liveblocks/react-flow`,
+    // default `storageKey: "flow"` — see `components/editor/canvas.tsx`) and
+    // read/written directly by `trigger/design-agent.ts` via
+    // `liveblocks.mutateStorage`, so both sides share one typed tree.
     Storage: {
-      // Example, a conflict-free list
-      // animals: LiveList<string>;
+      flow: LiveblocksFlow<CanvasNode, CanvasEdge>;
     };
 
     // Custom user info set when authenticating with a secret key
@@ -26,11 +32,14 @@ declare global {
     };
 
     // Custom events, for useBroadcastEvent, useEventListener
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- unused until RoomEvents are speced
-    RoomEvent: {};
-    // Example has two events, using a union
-    // | { type: "PLAY" }
-    // | { type: "REACTION"; emoji: "🔥" };
+    // Published by `trigger/design-agent.ts` (via `liveblocks.broadcastEvent`)
+    // as a shared status feed for the AI design agent's progress.
+    RoomEvent:
+      | {
+          type: "ai-status";
+          status: "started" | "thinking" | "generating" | "complete" | "error";
+          message: string;
+        };
 
     // Custom metadata set on threads, for useThreads, useCreateThread, etc.
     // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- unused until ThreadMetadata is speced
