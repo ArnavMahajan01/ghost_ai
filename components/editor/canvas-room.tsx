@@ -9,6 +9,8 @@ import { CanvasErrorBoundary } from "@/components/editor/canvas-error-boundary";
 
 interface CanvasRoomProps {
   roomId: string;
+  isTemplatesModalOpen: boolean;
+  onTemplatesModalOpenChange: (open: boolean) => void;
 }
 
 function CanvasLoading() {
@@ -26,14 +28,21 @@ function CanvasLoading() {
  * `Canvas` itself. The workspace page stays server-side; this is the client
  * boundary where the Liveblocks connection actually opens.
  */
-export function CanvasRoom({ roomId }: CanvasRoomProps) {
+export function CanvasRoom({
+  roomId,
+  isTemplatesModalOpen,
+  onTemplatesModalOpenChange,
+}: CanvasRoomProps) {
   return (
     <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
       <RoomProvider id={roomId} initialPresence={{ cursor: null, isThinking: false }}>
         <CanvasErrorBoundary>
           <ClientSideSuspense fallback={<CanvasLoading />}>
             <ReactFlowProvider>
-              <Canvas />
+              <Canvas
+                isTemplatesModalOpen={isTemplatesModalOpen}
+                onTemplatesModalOpenChange={onTemplatesModalOpenChange}
+              />
             </ReactFlowProvider>
           </ClientSideSuspense>
         </CanvasErrorBoundary>

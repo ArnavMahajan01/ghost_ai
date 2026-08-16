@@ -52,6 +52,10 @@ export const NODE_DEFAULT_SIZES: Record<
   hexagon: { width: 140, height: 110 },
 };
 
+/** Minimum node dimensions (px) enforced while resizing. */
+export const MIN_NODE_WIDTH = 60;
+export const MIN_NODE_HEIGHT = 40;
+
 /** The payload carried on a shape drag from the shape panel to the canvas. */
 export interface ShapeDragPayload {
   shape: NodeShape;
@@ -69,5 +73,10 @@ export interface CanvasNodeData extends Record<string, unknown> {
 /** The canvas's custom React Flow node type — no custom rendering yet, see spec's scope limits. */
 export type CanvasNode = Node<CanvasNodeData, "canvasNode">;
 
-/** The canvas's custom React Flow edge type — no custom rendering yet, see spec's scope limits. */
-export type CanvasEdge = Edge<Record<string, never>, "canvasEdge">;
+/** Data carried by every canvas edge. */
+export interface CanvasEdgeData extends Record<string, unknown> {
+  label: string;
+}
+
+/** The canvas's custom React Flow edge type — see `components/editor/canvas-edge.tsx`. */
+export type CanvasEdge = Edge<CanvasEdgeData, "canvasEdge">;
