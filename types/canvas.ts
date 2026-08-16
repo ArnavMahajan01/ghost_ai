@@ -80,3 +80,9 @@ export interface CanvasEdgeData extends Record<string, unknown> {
 
 /** The canvas's custom React Flow edge type — see `components/editor/canvas-edge.tsx`. */
 export type CanvasEdge = Edge<CanvasEdgeData, "canvasEdge">;
+
+/** The full canvas state persisted to Vercel Blob — see `context/feature-specs/21-canvas-autosave.md`. */
+export interface CanvasSnapshot {
+  nodes: CanvasNode[];
+  edges: CanvasEdge[];
+}
